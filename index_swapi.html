@@ -1,0 +1,264 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width">
+    <title>The Star Wars API</title>
+    <link rel="stylesheet" href='https://cdnjs.cloudflare.com/ajax/libs/twitter-bootstrap/3.3.7/css/bootstrap.min.css'>
+    <script src='https://cdnjs.cloudflare.com/ajax/libs/jquery/3.3.1/jquery.min.js'></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/twitter-bootstrap/3.3.7/js/bootstrap.min.js"></script>
+</head>
+
+<body>
+    <style type="text/css">
+        body {
+            font-family: 'Open Sans';
+            padding-top: 50px;
+            padding-bottom: 50px;
+            background: #DEDEDE;
+        }
+        
+        .card {
+            background: #FFF;
+            margin-bottom: 0.5em;
+            margin-top: 0.5em;
+            padding: 10px;
+            border-radius: 4px;
+            box-shadow: 0px 0px 3px #CCC;
+            cursor: pointer;
+        }
+        
+        .card span {
+            margin-left: 0.5em;
+        }
+        
+        .card .details {
+            margin-top: 1.6em;
+        }
+        
+        .card .img {
+            width: 90px;
+            border: 3px solid #CCC;
+            border-radius: 100%;
+        }
+    </style>
+
+    <div class="container">
+        <div class="col-md-12">
+            <div class="col-md-6 col-md-offset-3">
+                <div class="row">
+                    <h1>The Star Wars API</h1>
+                    <p>Documentation: <a href="https://swapi.co" target="_blank">https://swapi.co</a></p>
+                </div>
+                <div class="row">
+                    <form class="form-inline form-search">
+                        <div class="form-group">
+                            <div class="input-group">
+                                <input type="text" class="form-control input-search" placeholder="Search for...">
+                                <span class="input-group-btn">
+									<button class="btn btn-default btn-search" type="submit">Search</button>
+								</span>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+                <div class="row">
+                    <div id="list">
+                        <p>Loading....</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal fade" id="modal-details" data-backdrop="static">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <button type="button" class="close" data-dismiss="modal"><span>&times;</span></button>
+                    <h4 class="modal-title">Details</h4>
+                </div>
+                <div class="modal-body">
+                    <p>Loading....</p>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-default" data-dismiss="modal">Close</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        $(document).ready(() => {
+			
+			
+            const SWAPI = {
+                init: () => {
+                    SWAPI.getPeople();
+                    SWAPI.addEvents();
+                },
+                addEvents: () => {
+                    $('.form-search').on('submit', (event) => {
+                        event.preventDefault();
+
+                        const value = $('.input-search').val();
+
+                        SWAPI.getPeople({
+                            search: value
+                        });
+                    })
+                    $('body').on('click', '.card', (event) => {
+                        const url = $(event.currentTarget).attr('data-url');
+
+                        $('#modal-details').modal('show');
+                        SWAPI.getPeopleDetails(url);
+                    });
+                },
+				doRequest: (url, method, data, callback) => { 
+                /*doRequest: (options = {}, callback) => { 
+					const ajaxOptions = {
+						url: url,
+                        type: method,
+                        dataType: 'json',
+                        success: (response) => {
+                            callback(response);
+                        },
+                        error: (err) => {
+                            console.log('error', err);
+                        }
+					}
+					
+					if (options.data) {
+						ajaxOptions.data = options.data;
+					}
+					
+					
+					$.ajax(ajaxOptions);
+					*/
+				
+                    $.ajax({
+                        url: url,
+                        type: method,
+						data: data,
+                        dataType: 'json',
+                        success: (response) => {
+                            callback(response);
+                        },
+                        error: (err) => {
+                            console.log('error', err);
+                        }
+                    });
+                },
+                getPeople: (params) => {
+					params = params || {};
+					
+                    let url = 'https://swapi.co/api/people'
+                    const $list = $('#list');
+
+                    if (params.search) {
+                        url += '?search=' + params.search;
+                    }
+
+                    $list.html('<p>Loading...</p>');
+					
+					/*SWAPI.doRequest({
+						url: url,
+						method: 'GET',
+						data: {
+							name: "test"
+						}},
+						function(response) {
+						....
+					});*/
+
+                    SWAPI.doRequest(url, 'GET', null, function(response) {
+                        if (response.results && response.results.length) {
+                            let items = '';
+
+                            response.results.forEach((item) => {
+								 items +=
+                                    '<div class="card" data-url="' + item.url + '">' +
+                                    '<div class="row">' +
+                                    '<div class="col-md-8">' +
+                                    '<p class="details">' +
+                                    '<p class="name"><b>Name: </b>' + item.name + '<p/>' +
+                                    '<p class="gender"><b>Gender: </b>' + item.gender + '<p/>' +
+                                    '</p>' +
+                                    '</div>' +
+                                    '</div>' +
+                                    '</div>';
+							});
+							
+                            $list.html(items);
+                        } else {
+                            $list.html('<p>No results found</p>');
+                        }
+                    });
+                },
+                getPeopleDetails: (url) => {
+                    const $details = $('#modal-details .modal-body');
+					
+                    $details.html('<p>Loading...</p>');
+
+                    SWAPI.doRequest(url, 'GET', null, (person) => {
+                        if (person) {
+                            SWAPI.doRequest(person.homeworld, 'GET', null, (homeworld) => {
+                                if (homeworld) {
+                                    const item =
+                                        '<dl class="dl-horizontal">' +
+                                        '<dt>Name:</dt>' +
+                                        '<dd>' + person.name + '</dd>' +
+                                        '<dt>Gender:</dt>' +
+                                        '<dd>' + person.gender + '</dd>' +
+                                        '<dt>Height:</dt>' +
+                                        '<dd>' + person.height + '</dd>' +
+                                        '<dt>Mass:</dt>' +
+                                        '<dd>' + person.mass + '</dd>' +
+                                        '<dt>Hair color:</dt>' +
+                                        '<dd>' + person.hair_color + '</dd>' +
+                                        '<dt>Skin color:</dt>' +
+                                        '<dd>' + person.skin_color + '</dd>' +
+                                        '<dt>Eye color:</dt>' +
+                                        '<dd>' + person.eye_color + '</dd>' +
+                                        '<dt>Birth year:</dt>' +
+                                        '<dd>' + person.birth_year + '</dd>' +
+                                        '<dt>Homeworld</dt>' +
+                                        '<dd>' +
+                                        '<ul class="list-unstyled">' +
+                                        '<li><b>Name:</b> ' + homeworld.name + '</li>' +
+                                        '<li><b>Rotation period:</b> ' + homeworld.rotation_period + '</li>' +
+                                        '<li><b>Orbital period:</b> ' + homeworld.orbital_period + '</li>' +
+                                        '<li><b>Diameter:</b> ' + homeworld.diameter + '</li>' +
+                                        '<li><b>Climate:</b> ' + homeworld.climate + '</li>' +
+                                        '<li><b>Gravity:</b> ' + homeworld.gravity + '</li>' +
+                                        '<li><b>Terrain:</b> ' + homeworld.terrain + '</li>' +
+                                        '<li><b>Surface water:</b> ' + homeworld.surface_water + '</li>' +
+                                        '<li><b>Population:</b> ' + homeworld.population + '</li>' +
+                                        '</ul>' +
+                                        '</dd>' +
+                                        '<dt>Created:</dt>' +
+                                        '<dd>' + new Date(person.created) + '</dd>' +
+                                        '<dt>Edited:</dt>' +
+                                        '<dd>' + new Date(person.edited) + '</dd>' +
+                                        '</dl>';
+
+                                    $details.html(item);
+                                } else {
+									$details.html('<p>No homeworld found</p>');
+								}
+                            });
+                        } else {
+                            $details.html('<p>No person found</p>');
+                        }
+                    });
+                }
+            };
+
+            SWAPI.init();
+        });
+    </script>
+
+</body>
+
+</html>
